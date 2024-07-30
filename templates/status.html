@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Status</title>
+</head>
+<body>     
+    <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid d-flex justify-content-start">
+            <a class="navbar-brand mb-0 h1" href="/">TheIT.Blog</a>
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link active" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/status">Server Status</a>
+                </li>
+            </ul>
+            <div class="ms-auto">
+                <button id="admin-button" class="btn btn-outline-success" type="button" onclick="window.location.href = '/login'">Admin Login</button>
+                <button id="logout-button" class="btn btn-outline-danger" type="button" onclick="logout()" hidden>Log Out</button>
+            </div>
+        </div>
+    </nav>
+    <h3 style="margin-top: 5%; text-align: center;">Server Status</h3>
+    <div class="card" style="width: 23rem; margin: 80px auto; margin-top: 5%;">
+        <div class="card-body" style="text-align: center; justify-content: center;">
+          <h5 class="card-title">MySQL Database</h5>
+          <p class="card-text" id="database-status" style="font-size: 1.25rem; font-weight: bold; margin-bottom: 15px;"></p>
+          <a href="#" id="mysql-server-info" class="btn btn-primary" hidden></a>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            var adminMode = verifyAdminStatus();
+            let status = document.getElementById('database-status');
+            let fetchOptions = {
+                method: 'GET',
+                headers: {
+                    'X-CSJS-RunOwner': true
+                }
+            }
+            
+            // Handle Admin mode here too
+            if(adminMode) {
+                let adminButton = document.getElementById('admin-button');
+                let logoutButton = document.getElementById('logout-button');
+                let serverInfoButton = document.getElementById('mysql-server-info');
+                adminButton.onclick = "window.location.href = '#'"
+                adminButton.innerText = "Logged In: Administrator";
+                logoutButton.removeAttribute('hidden');
+                serverInfoButton.removeAttribute('hidden');
+                let defaultInfoString = "";
+                serverInfoButton.addEventListener('click', () => {
+                    serverInfoButton.innerText = "Pinging...";
+                    fetch('/sql_basic_info', fetchOptions)
+                    .then(async response => {
+                        let data = await response.json();
+                        defaultInfoString = `Hosted on ${data.host}, port ${data.port}`;
+                    });
+
+                    fetch('/status', fetchOptions)
+                    .then(resp => {
+                        if(resp.ok) {
+                            serverInfoButton.innerText = "Ping successful!";
+                            serverInfoButton.className = "btn btn-success";
+                            status.innerText = "Online";
+                            setTimeout(() => {
+                                serverInfoButton.innerText = defaultInfoString;
+                                serverInfoButton.className = "btn btn-primary";
+                            }, 3000);
+                        } else {
+                            serverInfoButton.innerText = "Ping failed.";
+                            serverInfoButton.className = "btn btn-danger";
+                            status.innerText = "Offline";
+                            status.style.color = "#a83232";
+                            setTimeout(() => {
+                                serverInfoButton.innerText = defaultInfoString;
+                                serverInfoButton.className = "btn btn-primary";
+                            }, 3000);
+                        }
+
+                        if(String(document.getElementById('database-status').textContent).trim() === "Online")
+                            status.style.color = "#32a858";
+                        else
+                            status.style.color = "#a83232";
+                    }).catch(error => console.error("An error occurred while obtaining the database information\n", error));
+                });
+                serverInfoButton.click();
+            }
+
+            fetch('/status', fetchOptions)
+            .then(resp => {
+                if(resp.ok) {
+                    status.innerText = "Online";
+                    status.style.color = "#32a858";
+                } else {
+                    status.innerText = "Offline";
+                    status.style.color = "#a83232";
+                }
+            });
+        });
+    </script>
+    <script src="web_common.js"></script>
+</body>
+</html>
